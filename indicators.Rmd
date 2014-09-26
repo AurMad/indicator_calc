@@ -1,0 +1,545 @@
+---
+title: "Calculation of reference values for herd health indicators"
+author: "Aurélien Madouasse"
+date: "Wednesday, September 24, 2014"
+output: word_document
+---
+
+# Work outline
+
+The aim of this document is to introduce herd health indicators and to show how they can be calculated from datasets that are commonly available on farm. 
+
+The sources of data that are used are animal registration and movement data, milk recording data and artificial insemination data.
+
+The indicators that are going to be presented below are:
+
+- Productive life indicators
+- Mortality indicators
+- Reproductive indicators
+- Mastitis inidcators
+- Indicators linked to diet
+
+
+# Provisional schedule
+
+## Data description
+
+Task: describe available data
+
+Scheduled: 26/09/2014
+
+Completed: 24/09/2014
+
+
+## Productive life indicators
+
+Task: describe procedure for calculating indicators
+
+The indicator is:
+
+- Length of productive life
+
+Scheduled: 26/09/2014
+
+Completed:
+
+
+## Mortality indicators
+
+Task: describe procedure for calculating indicators
+
+The indicators are:
+
+- Mortality rate for calves
+- Mortality rate for young stock
+- Mortality rate for cows
+
+Scheduled: 26/09/2014
+
+Completed:
+
+
+## Reproductive indicators
+
+Task: describe procedure for calculating indicators
+
+The indicators are:
+
+- Age at first calving
+- Calving interval
+
+Scheduled: 26/09/2014
+
+Completed:
+
+## Mastitis indicators
+
+Task: describe procedure for calculating indicators
+
+The indicators are:
+
+- Test-day proportion of somatic cell counts above threshold
+- Between test-days incidence of raised somatic cell counts
+
+Scheduled: 26/09/2014
+
+Completed:
+
+
+## Indicators linked to diet
+
+Task: describe procedure for calculating indicators
+
+The indicators are:
+
+- Test-day proportion of fat to protein ratios above theshold
+- Test-day proportion of fat to protein ratios below theshold
+
+Scheduled: 26/09/2014
+
+Completed:
+
+
+# Data
+
+In order for me to create and for you to replicate the indicator variables from herd data, I have extracted data from 10 randomly selected herds. For these herds,the aim was to gather all the data that were relevant for performing the analyses between 2003 and end of 2010. The data are in 4 separate variables that I am going to present below.
+
+```{r, data_loading, echo=FALSE}
+mvt  <- read.table("data/mvt.txt", 
+                   sep = ",", dec = ".", header = TRUE)
+rec  <- read.table("data/rec.txt", 
+                   sep = ",", dec = ".", header = TRUE)
+ais  <- read.table("data/ais.txt", 
+                   sep = ",", dec = ".", header = TRUE)
+anim <- read.table("data/anim.txt", 
+                   sep = ",", dec = ".", header = TRUE)
+```
+
+All the dates are formatted as yyyy-mm-dd.
+
+## Cow dataset
+
+Data on individual cows are stored in a variable called *anim*.
+
+```{r, dataset_anim}
+head(anim)
+```
+
+The columns are:
+
+- *cowID*: unique cow identifier.
+- *date_birth*: date of birth 
+- *breed*: cow breed
+
+## Milk recording dataset
+
+The milk recording dataset is stored in the *rec* variable.
+
+```{r, dataset_milk_recording}
+head(rec)
+```
+
+The columns are:
+
+- *herdID*: unique herd identifier
+- *date_mr*: date of milk recoring
+- *cowID*: unique cow identifier
+- *date_calv*: calving date
+- *parity*: cow parity
+- *milk*: milk yield in kg
+- *bfat*: butterfat content in g/kg
+- *prot*: protein content in g/kg
+- *scc*: somatic cell count in 100 cells/mL
+
+
+## Artificial inseminations dataset
+
+Artificial insemination data are stored in the *ais* variable.
+
+```{r, dataset_AI}
+head(ais)
+```
+
+The columns are:
+
+- *herdID*: unique herd identifier
+- *cowID*: unique cow identifier
+- *date_pcalv*: date of previous calving
+- *date_AI*: date of artificial insemination
+
+
+## Movement data
+
+Animal movement data are stored in the *mvt* variable.
+
+```{r}
+head(mvt)
+```
+
+The columns are:
+
+- *herdID*: unique herd identifier
+- *cowID*: unique cow identifier
+- *date_IN*: date cow moved into this herd
+- *cause_IN*: reason for cow moving into this herd
+- *date_OUT*: date cow moved out of this herd
+- *cause_OUT*: reason for cow moving out of this herd
+
+
+Here is a list of the codes used in the *cause_IN* variable:
+
+|code|Meaning  |
+|----|---------|
+|A   |Purchase |
+|N   |Birth    |
+|P   |Lending  |
+
+In our dataset, the frequencies of each reason for joining a herd are as follows:
+  
+```{r, mvt_causeIN_table}
+table(mvt$cause_IN)
+```
+
+
+Here is a list of the codes used in the *cause_OUT* variable:
+  
+|code|Meaning                                               |
+|----|------------------------------------------------|
+|B   |Sold for meat                                           |
+|C   |Slaughtered for consumption of farm |
+|E   |Sold to other farm                                  |
+|M   |Dead                                                        |
+
+
+In our dataset, the frequencies of each reason for leaving a herd are as follows:
+  
+```{r, mvt_causeOUT_table}
+table(mvt$cause_IN)
+```
+
+
+# Periodicity of indicator calculation
+
+For the calculation of indicators we specify a starting date and an end date. These are stored in the `start_date` and `end_date` variables respectively.
+
+```{r, start_end-dates}
+start_date <- "2006-01-01"
+end_date   <- "2006-12-31"
+```
+
+
+# Productive life indicators
+
+## Length of productive life
+
+The aim of the productive life indicator is to measure the time a cow spends on the herd between her first calving and her culling or death.
+
+
+# Mortality indicators
+
+## Mortality of calves
+
+With this indicator, we want to measure the proportion of calves which die between birth and 30 days (`calves_age1`) of life. For this indicator, we only take female calves into account because male calves can be sold at various ages, which are rarely known. Inlcuding these male calves would make the calculations very imprecise.
+
+### Denominator
+
+Could be:
+
+- All the female calves that were born between `end_date - calves_age1` and `end_date`.
+- All the female calves that could have been less than `calves_age1`  between `end_date - calves_age1` and `end_date`.
+
+The difference between these 2 options becomes less important as the period investigated grows bigger. That is to say it is important if the calculations are carried out monthly but much less so if they are done on an anual basis.
+
+
+### Numerator
+
+Could be:
+
+- All the female calves that were born between `end_date - calves_age1` and `end_date` and died.
+- All the female calves that could have been less than `calves_age1`  between `end_date - calves_age1` and `end_date` and died.
+
+
+## Mortality of young stock
+
+### Denominator
+
+### Numerator
+
+
+## Mortality of cows
+
+### Denominator
+
+### Numerator
+
+
+# Reproductive indicators
+
+## Creation of a list of lactations
+
+Most of the calculations undertaken in this part are easier if we have a list of individual lactations containing cow IDs, dates of calving and parity. This is done as follows.
+
+We use the milk recording dataset as it contains all the necessary information. 
+
+```{r, lactation_list_create}
+lac <- rec[, c("herdID", "cowID", "date_calv", "parity")]
+lac <- lac[-which(duplicated(lac)),]
+```
+
+
+## Age at first calving
+
+Animals included are all the nulliparous cows that calved between `start_date` and `end_date`. For these animals, we calculate the median age at calving. 
+
+We need to pieces of information:
+
+- calving dates of the nulliparous cows that calved between `start_date` and `end_date` from the `lac` dataset.
+- birth dates of the above identified cows from the `anim` dataset.
+
+From the lactation dataset, the cows that calved as nulliparous are now cows of parity 1. 
+
+```{r lactation_select_nullip}
+lac_p1 <- lac[lac$parity == 1, -match("parity", colnames(lac))]
+```
+
+The dates of birth for these cows are incorporated from the `anim` dataset.
+
+```{r age_calving1_dob}
+lac_p1 <- merge(lac_p1, anim[, c("cowID", "date_birth")], by = "cowID", all.x = TRUE)
+```
+
+
+The ages at first calving can now be calculated.
+
+```{r age_calving1}
+lac_p1$age_calv1 <- with(lac_p1, as.numeric(as.Date(date_calv) - as.Date(date_birth)))
+```
+
+The distribution of the ages at first calving in this dataset is presented below.
+
+```{r age_calv1_dist}
+hist(lac_p1$age_calv1,
+     main = "Histogram of ages at first calving",
+     xlab = "Age at first calving (days)")
+```
+
+
+The percentiles 25, 50 and 75 of the distribution of ages at first calving can be calculated as follows.
+
+```{r age_calv1_percentiles}
+quantile(lac_p1$age_calv1, c(.25, .5, .75), na.rm = TRUE)
+```
+
+
+
+## Calving interval
+
+The calving intervals are calculated from the dataset containing the list of lactations, `lac`. As a first step, we add the date of the previous calving that we call `date_pcalv`. The number of days between the latest calving and the prevous calving is then calculated.
+
+
+```{r calv_int_date_pcalv}
+lac <- lac[order(lac$cowID, as.Date(lac$date_calv)),]
+lac$pcowID <- c(NA, lac$cowID[-nrow(lac)])
+lac$date_pcalv <- c(NA, as.character(lac$date_calv)[-nrow(lac)])
+lac$calv_int <- with(lac, ifelse(cowID == pcowID,
+                                 as.numeric(as.Date(date_calv) - as.Date(date_pcalv)),
+                                 NA))
+lac <- lac[, -match(c("pcowID", "date_pcalv"), colnames(lac))]
+lac <- lac[order(lac$herdID, as.Date(lac$date_calv)),]
+```
+
+The distribution of calving intervals is presented below.
+
+```{r calv_int_dist}
+hist(lac$calv_int,
+     main = "Histogram of calving intervals",
+     xlab = "Calving intervals (days)")
+```
+
+The percentiles 25, 50 and 75 of the distribution of calving intervals can be calculated as follows.
+
+```{r calv_int_percentiles}
+quantile(lac$calv_int, c(.25, .5, .75), na.rm = TRUE)
+```
+
+
+# Mastitis indicators
+
+Our primary and possibly only source of data concerning mastitis will be somatic cell count from milk recording. These somatic cell counts are measured at the cow level, on a monthly basis, most of the time. The procedures to collect and analyse milk recording data, and consequently somatic cell counts, are described by the international committee for animal recording (ICAR). 
+
+Various thresholds are used to categorise cows as having mastitis. A common threshold is 200 000 cells/mL following work undertaken by Dohoo in the 1990s. But in France, farmers are used to a threshold of 300 000 cells/mL because it is what is used by the national milk recording organisation. Here, I will use a threshold of 200 000 cells/mL. I set it explicitely in the code below so that you can modify it if wanted.
+
+```{r scc_threshold}
+scc_T <- 200
+```
+
+A problem that has not been considered here is: how to take cows that were missing on a test-day into account. They could have missing data because they were treated for mastitis.
+
+## Test-day proportion of somatic cell counts above threshold
+
+Once we have milk recording data and a threshold, it is extremely easy to determine the proportion of milk recordings above the theshold.
+
+- For the whole data:
+```{r scc_aboveT_all}
+with(rec, length(scc[scc > scc_T]) / length(scc))
+```
+
+- Between `start_date` and `end_date`:
+```{r}
+with(rec[as.Date(rec$date_mr) >= start_date & as.Date(rec$date_mr) <= end_date,], 
+           length(scc[scc > scc_T]) / length(scc))
+```
+
+- Between `start_date` and `end_date`, by herd:
+```{r}
+with(rec[as.Date(rec$date_mr) >= start_date & as.Date(rec$date_mr) <= end_date,], 
+           tapply(scc, herdID, function(x) length(x[x > scc_T]) / length(x)))
+```
+
+
+
+## Between test-days incidence of raised somatic cell counts during lactation
+
+There could be various ways to calculate this indicator. Raised SCC has to be defined using SCC collected at an earlier point in time. We can use the previous milk recording of a cow. In this case, dry periods will be included. Therefore, we will define this indicator by comparing SCCs on 2 consecutive test-days, provided days in milk on the second test-day is greater than days in milk on the first test-day.
+
+First we create variables for days in milk at milk recording (`Dim`), days in milk at previous test-day (`pDim`) and somatic cell count at previous test-day (`pscc`).
+
+```{r raised_scc_mkvar}
+rec <- rec[order(rec$cowID, as.Date(rec$date_mr)),]
+rec$Dim <- with(rec, as.numeric(as.Date(date_mr) - as.Date(date_calv)))
+rec$pcowID   <- c(NA, rec$cowID[-nrow(rec)])
+rec$pdate_mr <- c(NA, as.character(rec$date_mr)[-nrow(rec)])
+rec$pdate_mr <- with(rec, ifelse(cowID == pcowID, pdate_mr, NA))
+rec$pDim     <- c(NA, rec$Dim[-nrow(rec)])
+rec$pDim     <- with(rec, ifelse(cowID == pcowID, pDim, NA))
+rec$pscc     <- c(NA, rec$scc[-nrow(rec)])
+rec$pscc     <- with(rec, ifelse(cowID == pcowID, pscc, NA))
+
+rec <- rec[, -match(c("pcowID", "pdate_mr"), colnames(rec))]
+```
+
+We can now determine the number of cows moving from below to above the threshold between consecutive test-days, as a proportion of the number of cows that were initially below the threshold.
+
+- For the whole dataset:
+```{r prais_lac_all}
+with(rec[!is.na(rec$scc) & !is.na(rec$pscc) & rec$Dim > rec$pDim,],
+  length(scc[scc >= scc_T & pscc < scc_T]) / length(scc[pscc < scc_T]))
+```
+
+- Between `start_date` and `end_date`:
+```{r prais_lac_startend}
+with(rec[as.Date(rec$date_mr) >= start_date & as.Date(rec$date_mr) <= end_date & !is.na(rec$scc) & !is.na(rec$pscc) & rec$Dim > rec$pDim,],
+  length(scc[scc >= scc_T & pscc < scc_T]) / length(scc[pscc < scc_T]))
+```
+
+- Between `start_date` and `end_date`, by herd:
+Here we create an indicator variable that is defined for cows that had a somatic cell count below the threshold at the previous test-day.
+
+```{r prais_lac_startend_herd}
+rec$Irais <- rep(NA)
+
+rec$Irais[!is.na(rec$scc) & !is.na(rec$pscc)] <- with(rec[!is.na(rec$scc) & !is.na(rec$pscc),], ifelse(pscc < 200, 0, Irais))
+
+rec$Irais[!is.na(rec$Irais)] <- with(rec[!is.na(rec$Irais),],
+                                    ifelse(scc >= 200, 1, 0))
+
+with(rec[!is.na(rec$Irais) & rec$Dim > rec$pDim,], 
+     tapply(Irais, herdID, function(x) length(x[x == 1]) / length(x)))
+```
+
+
+## Incidence of raised somatic cell counts during the dry period
+
+Now that we have an incicator of raised somatic cell count during lactation, it is easy to apply it to determine the incidence of raised somatic cell count during the dry period. We just have to put as a condition that `Dim < pDim`.
+
+```{r prais_dp_startend_herd}
+with(rec[!is.na(rec$Irais) & rec$Dim < rec$pDim,], 
+     tapply(Irais, herdID, function(x) length(x[x == 1]) / length(x)))
+```
+
+
+## Percentage of cure during the dry period
+
+We define cure during the dry period by somatic cell count going from above to below the threshold between the last milk recording in a lactation and the first milk recording in the following lactation.
+
+```{r pcur_dp_startend_herd}
+rec$Icur <- rep(NA)
+
+rec$Icur[!is.na(rec$scc) & !is.na(rec$pscc)] <- with(rec[!is.na(rec$scc) & !is.na(rec$pscc),], ifelse(pscc >= 200, 0, Icur))
+
+rec$Icur[!is.na(rec$Icur)] <- with(rec[!is.na(rec$Icur),],
+                                    ifelse(scc < 200, 1, 0))
+
+with(rec[!is.na(rec$Icur) & rec$Dim < rec$pDim,], 
+     tapply(Icur, herdID, function(x) length(x[x == 1]) / length(x)))
+```
+
+# Indicators linked to diet
+
+## Creation of the fat to protein ratio variables
+
+```{r fpr_mk}
+rec$fpr <- with(rec, bfat / prot)
+```
+
+
+## Test-day fat to protein ratio as a measure of subclinical ketosis
+
+
+The fat to protein ratio can be used as an indicator of ketosis. Two things need to considered to use this indicator : a threshold that defines ketosis (`fpr_ket_T`) and a time period after calving when ketosis is more likely (between `fpr_ket_lbDim` and `fpr_ket_ubDim`).
+
+```{r fpr_ket}
+fpr_ket_T     <- 1.4
+fpr_ket_lbDim <- 30
+fpr_ket_ubDim <- 100
+```
+
+- For the whole dataset:
+```{r fpr_ket_all}
+with(rec[rec$Dim >= fpr_ket_lbDim & rec$Dim <= fpr_ket_ubDim,], 
+     length(fpr[fpr > fpr_ket_T]) / length(fpr))
+```
+
+- Between `start_date` and `end_date`:
+```{r fpr_ket_startend}
+with(rec[rec$Dim >= fpr_ket_lbDim & rec$Dim <= fpr_ket_ubDim,], 
+     length(fpr[fpr > fpr_ket_T]) / length(fpr))
+```
+
+
+- Between `start_date` and `end_date`, by herd:
+```{r fpr_ket_startend_herd}
+with(rec[rec$Dim >= fpr_ket_lbDim & rec$Dim <= fpr_ket_ubDim,], 
+     tapply(fpr, herdID, function(x) length(x[x > fpr_ket_T]) / length(x)))
+```
+
+
+## Test-day fat to protein ratio as a measure of subacute ruminal acidosis
+
+The fat to protein ratio can also be used as a marker of subacute ruminal acidosis. In this case, a different threshold is used. The number of cows below the threshold is calculated.
+
+```{r fpr_sara}
+fpr_sara_T <- 1.0
+```
+
+
+- For the whole dataset:
+```{r fpr_sara_all}
+with(rec, 
+     length(fpr[fpr < fpr_sara_T]) / length(fpr))
+```
+
+- Between `start_date` and `end_date`:
+```{r fpr_sara_startend}
+with(rec, 
+     length(fpr[fpr < fpr_sara_T]) / length(fpr))
+```
+
+
+- Between `start_date` and `end_date`, by herd:
+```{r fpr_sara_startend_herd}
+with(rec, 
+     tapply(fpr, herdID, function(x) length(x[x < fpr_sara_T]) / length(x)))
+```
+
+
