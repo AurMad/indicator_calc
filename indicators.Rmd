@@ -16,7 +16,7 @@ The indicators that are going to be presented below are:
 - Productive life indicators
 - Mortality indicators
 - Reproductive indicators
-- Mastitis inidcators
+- Mastitis indicators
 - Indicators linked to diet
 
 
@@ -239,7 +239,7 @@ The aim of the productive life indicator is to measure the time a cow spends on 
 
 ## Mortality of calves
 
-With this indicator, we want to measure the proportion of calves which die between birth and 30 days (`calves_age1`) of life. For this indicator, we only take female calves into account because male calves can be sold at various ages, which are rarely known. Inlcuding these male calves would make the calculations very imprecise.
+With this indicator, we want to measure the proportion of calves which die between birth and 30 days (`calves_age1`) of life. For this indicator, we only take female calves into account because male calves can be sold at various ages, which are rarely known. Including these male calves would make the calculations very imprecise.
 
 ### Denominator
 
@@ -450,7 +450,7 @@ with(rec[!is.na(rec$Irais) & rec$Dim > rec$pDim,],
 
 ## Incidence of raised somatic cell counts during the dry period
 
-Now that we have an incicator of raised somatic cell count during lactation, it is easy to apply it to determine the incidence of raised somatic cell count during the dry period. We just have to put as a condition that `Dim < pDim`.
+Now that we have an indicator of raised somatic cell count during lactation, it is easy to apply it to determine the incidence of raised somatic cell count during the dry period. We just have to put as a condition that `Dim < pDim`.
 
 ```{r prais_dp_startend_herd}
 with(rec[!is.na(rec$Irais) & rec$Dim < rec$pDim,], 
