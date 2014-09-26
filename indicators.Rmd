@@ -1,6 +1,6 @@
 ---
 title: "Calculation of reference values for herd health indicators"
-author: "AurÃ©lien Madouasse"
+author: "Aurélien Madouasse"
 date: "Wednesday, September 24, 2014"
 output: word_document
 ---
@@ -20,6 +20,18 @@ The indicators that are going to be presented below are:
 - Indicators linked to diet
 
 
+# How to contribute ?
+
+This file was generated using a reporting program with which R code can be embedded within written text. I this document, the R code I wrote appears as shaded and explanations appear as normal text. To use this facility you need to have the following programs installed on your computer: R, Rstudio and the R package Knitr. You also need to have the 4 data files copied into a data directory nested in your R working directory. Once all this is in place, it is fairly easy to use, provided you understand R code. If you have all this, you can replicate this analysis and explore other indicators or play with your own data. If anyone is interested, I am happy to move further in that direction.
+
+
+A simpler way to work is to use the track change function on the attached MS Word file.
+
+
+We also attach a file named 'indicators.R' which contains all the R code that is shown in the current document.
+
+
+
 # Provisional schedule
 
 ## Data description
@@ -28,7 +40,7 @@ Task: describe available data
 
 Scheduled: 26/09/2014
 
-Completed: 24/09/2014
+Completed: 26/09/2014
 
 
 ## Productive life indicators
@@ -41,7 +53,7 @@ The indicator is:
 
 Scheduled: 26/09/2014
 
-Completed:
+Completed: 17/10/2014
 
 
 ## Mortality indicators
@@ -56,7 +68,7 @@ The indicators are:
 
 Scheduled: 26/09/2014
 
-Completed:
+Completed: 17/10/2014
 
 
 ## Reproductive indicators
@@ -70,7 +82,7 @@ The indicators are:
 
 Scheduled: 26/09/2014
 
-Completed:
+Completed: 26/09/2014
 
 ## Mastitis indicators
 
@@ -83,7 +95,7 @@ The indicators are:
 
 Scheduled: 26/09/2014
 
-Completed:
+Completed: 26/09/2014
 
 
 ## Indicators linked to diet
@@ -97,7 +109,8 @@ The indicators are:
 
 Scheduled: 26/09/2014
 
-Completed:
+Completed: 26/09/2014
+
 
 
 # Data
@@ -214,7 +227,7 @@ Here is a list of the codes used in the *cause_OUT* variable:
 In our dataset, the frequencies of each reason for leaving a herd are as follows:
   
 ```{r, mvt_causeOUT_table}
-table(mvt$cause_IN)
+table(mvt$cause_OUT)
 ```
 
 
@@ -234,32 +247,31 @@ end_date   <- "2006-12-31"
 
 The aim of the productive life indicator is to measure the time a cow spends on the herd between her first calving and her culling or death.
 
+The difficulty with this indicator is that we need to know when the cow first calved. This piece of data can be unavailablable at the time of calculation. For example, a cow that is ten years old today can have had herd first calving 8 years ago.
+
+One way to go can be to use the parity of culled cows. For example the median parity of the cows culled between `start_date` and `end_date`.
+
 
 # Mortality indicators
 
 ## Mortality of calves
 
-With this indicator, we want to measure the proportion of calves which die between birth and 30 days (`calves_age1`) of life. For this indicator, we only take female calves into account because male calves can be sold at various ages, which are rarely known. Including these male calves would make the calculations very imprecise.
+With this indicator, we want to measure the proportion of calves which die between birth and 30 days (`mort_calves_age1`) of life. For this indicator, we only take female calves into account because male calves can be sold at various ages, which are rarely known. Including these male calves would make the calculations very imprecise.
 
-### Denominator
-
-Could be:
-
-- All the female calves that were born between `end_date - calves_age1` and `end_date`.
-- All the female calves that could have been less than `calves_age1`  between `end_date - calves_age1` and `end_date`.
+We could either work with calf-days at risk or with the frequency of deaths in calves that were present during the investigated time interval, whether it was at least one day or for the entire time interval.
 
 The difference between these 2 options becomes less important as the period investigated grows bigger. That is to say it is important if the calculations are carried out monthly but much less so if they are done on an anual basis.
 
 
+### Denominator
+
+
 ### Numerator
-
-Could be:
-
-- All the female calves that were born between `end_date - calves_age1` and `end_date` and died.
-- All the female calves that could have been less than `calves_age1`  between `end_date - calves_age1` and `end_date` and died.
 
 
 ## Mortality of young stock
+
+Here we are interested in the proportion of deaths in calves between `mort_calves_age1` and the first calving.
 
 ### Denominator
 
@@ -267,6 +279,13 @@ Could be:
 
 
 ## Mortality of cows
+
+Here we are interested in the number of cows who died on farm as a proportion of all the cows present on the farm during the year. This last figure needs to be estimated.
+
+
+## Cows present on farm
+
+Cows are present on farm from their first calving until culling, death or sale.
 
 ### Denominator
 
@@ -496,20 +515,20 @@ fpr_ket_ubDim <- 100
 
 - For the whole dataset:
 ```{r fpr_ket_all}
-with(rec[rec$Dim >= fpr_ket_lbDim & rec$Dim <= fpr_ket_ubDim,], 
+with(rec[!is.na(rec$fpr) & rec$Dim >= fpr_ket_lbDim & rec$Dim <= fpr_ket_ubDim,], 
      length(fpr[fpr > fpr_ket_T]) / length(fpr))
 ```
 
 - Between `start_date` and `end_date`:
 ```{r fpr_ket_startend}
-with(rec[rec$Dim >= fpr_ket_lbDim & rec$Dim <= fpr_ket_ubDim,], 
+with(rec[!is.na(rec$fpr) & rec$Dim >= fpr_ket_lbDim & rec$Dim <= fpr_ket_ubDim,], 
      length(fpr[fpr > fpr_ket_T]) / length(fpr))
 ```
 
 
 - Between `start_date` and `end_date`, by herd:
 ```{r fpr_ket_startend_herd}
-with(rec[rec$Dim >= fpr_ket_lbDim & rec$Dim <= fpr_ket_ubDim,], 
+with(rec[!is.na(rec$fpr) & rec$Dim >= fpr_ket_lbDim & rec$Dim <= fpr_ket_ubDim,], 
      tapply(fpr, herdID, function(x) length(x[x > fpr_ket_T]) / length(x)))
 ```
 
@@ -525,21 +544,22 @@ fpr_sara_T <- 1.0
 
 - For the whole dataset:
 ```{r fpr_sara_all}
-with(rec, 
+with(rec[!is.na(rec$fpr) ,], 
      length(fpr[fpr < fpr_sara_T]) / length(fpr))
 ```
 
 - Between `start_date` and `end_date`:
 ```{r fpr_sara_startend}
-with(rec, 
+with(rec[!is.na(rec$fpr) & as.Date(rec$date_mr) >= start_date & as.Date(rec$date_mr) <= end_date, ], 
      length(fpr[fpr < fpr_sara_T]) / length(fpr))
 ```
 
 
 - Between `start_date` and `end_date`, by herd:
 ```{r fpr_sara_startend_herd}
-with(rec, 
+with(rec[!is.na(rec$fpr) & as.Date(rec$date_mr) >= start_date & as.Date(rec$date_mr) <= end_date, ], 
      tapply(fpr, herdID, function(x) length(x[x < fpr_sara_T]) / length(x)))
+
 ```
 
 
